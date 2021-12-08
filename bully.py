@@ -16,79 +16,60 @@ p = comm.Get_size()
     
 electionCaller = 0
 
-def baseCase():
-    for procid in range(0, p):
-        imposingMessage = str(procid) + " acknowledges that " + str(my_rank) + " is the leader"
-        comm.isend(imposingMessage, dest=procid)
-    print(comm.irecv(source=my_rank).wait())
-
 if my_rank == electionCaller:
     reqList = []
     for procid in range(my_rank+1, p):
-        message = "Hello from " + str(my_rank)
-        comm.isend(message, dest=procid)
+        message = "I, process " + str(my_rank) + ", challenge you!!!"
+        comm.send(message, dest=procid)
         reqList.append(comm.irecv(source=procid))
-    time.sleep(0.1)
-    status = MPI.Status()
-    leader = None
-    print("BLARG: ", MPI.Request.testany(reqList, status))
-    if MPI.Request.testany(reqList, status)[1]: #If there was a response, I am not the leader
-        leader = comm.irecv(source=MPI.ANY_SOURCE) #The leader will be announced through this request
-        print(leader)
-    else:
-        baseCase()
+    time.sleep(2)
+    leaderFlag = True
+    for request in reqList:
+        if request.test(): # If there was a response, I am not the leader
+            leaderFlag = False
+    
+    if leaderFlag:
+        print("------------------------------------------------")
+        print("PROCESS " + str(my_rank) + " ANNOUNCES HIS PLAN TO WORLD DOMINATION")
+        for procid in range(my_rank+1, p):
+            leaderAnnouncement = str(procid) + "recognizes process " + str(my_rank) + " as its supreme leader"
+            comm.send(leaderAnnouncement, dest=procid)
+    
+    while(True): # Wait for the leader while doing tasks as normal
+        if(comm.probe):
+            leaderMessage = comm.recv(source=MPI.ANY_SOURCE) # Implement broadcast later
+            print(leaderMessage)
+    
+    
+else:
     while(True):
-        if(leader):
-            leaderStatus = MPI.Status()
-            leaderStatus = MPI.Request.test(leader, leaderStatus)
-            print(leaderStatus[1])
-else:
-    req = comm.irecv(source=MPI.ANY_SOURCE)
-    status = MPI.Status()
-    req.wait(status)
-    message = "ACK from " + str(my_rank)
-    comm.isend(message, dest=status.Get_source())
-    if my_rank == 3:
-        baseCase()
+        if(comm.probe(source=MPI.ANY_SOURCE)): # Received a challenge from other process
+            incomingMessageStatus = MPI.Status()
+            incomingMessage = comm.recv(source=MPI.ANY_SOURCE, status=incomingMessageStatus)
+            print(incomingMessage)
+            responseMessage = "You are not my leader, this is " + str(my_rank) # Responds the challenge with an ACK to assert dominance
+            comm.isend(responseMessage, dest=incomingMessageStatus.Get_source())
 
-
-
-'''def callElection():
-    reqList = []
-    for procid in range(my_rank, p):
-        message = my_rank
-        comm.isend(message, dest=procid)
-        reqList = comm.irecv(source=procid)
-    time.sleep(0.2)
-    #for req in reqList:
-    #    req.cancel()
-    if MPI.Request.testany([reqList]):
-        #I am not the leader, wait for the broadcast
-        leader = None
-        reqBroadcast = comm.Ibcast(leader, root=MPI.ANY_SOURCE)
-
-    else:
-        #Broadcast that I am the leader
-        leader = str(my_rank) + " is the leader"
-        reqBroadcast = comm.Ibcast(leader, root=my_rank)
-        return reqBroadcast
-
-
-if my_rank == electionCaller:
-    callElection()
-
-else:
-    reqBroadcastList = []
-    req = comm.irecv(source=MPI.ANY_SOURCE)
-    while True:
-        if req.test():
-            status = MPI.Status()
-            req.wait(status)
-            ack = "ACK from process " + str(my_rank)
-            comm.isend(ack, dest=status.Get_source())
-            #Continue Election
-            reqBroadcastList += callElection()
-            req = comm.irecv(source=MPI.ANY_SOURCE)
-        if MPI.Request.testany(reqBroadcastList): #wait for the leader announcement
-            leader = MPI.Request.testany(reqBroadcastList)
-            print(leader)'''
+            # Challenge other processes to see if I am the leader
+            reqList = []
+            for procid in range(my_rank+1, p):
+                message = "I, process " + str(my_rank) + ", challenge you!!!"
+                comm.send(message, dest=procid)
+                reqList.append(comm.irecv(source=procid))
+            time.sleep(2)
+            leaderFlag = True
+            for request in reqList:
+                if request.test(): # If there was a response, I am not the leader
+                    leaderFlag = False
+            
+            if leaderFlag:
+                print("------------------------------------------------")
+                print("PROCESS " + str(my_rank) + " ANNOUNCES HIS PLAN TO WORLD DOMINATION")
+                for procid in range(my_rank+1, p):
+                    leaderAnnouncement = str(procid) + "recognizes process " + str(my_rank) + " as its supreme leader"
+                    comm.send(leaderAnnouncement, dest=procid)
+            
+            while(True): # Wait for the leader while doing tasks as normal
+                if(comm.probe):
+                    leaderMessage = comm.recv(source=MPI.ANY_SOURCE) # Implement broadcast later
+                    print(leaderMessage)
