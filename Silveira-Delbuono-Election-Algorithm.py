@@ -13,7 +13,7 @@ comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 p = comm.Get_size()
     
-electionCaller = 0
+electionCaller = 1
 
 class Leader:
     id = None
