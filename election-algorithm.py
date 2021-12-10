@@ -1,7 +1,7 @@
 #When a process P recovers from failure, or the failure detector indicates that the current coordinator has failed, P performs the following actions:
 
-#1 - P sends a message to all processes with IDs bigger than its ID
-#2 - The biggest ID process that responds to this call is the leader
+#1 - P sends a message to all processes
+#2 - Processes with ID bigger than P responds to this call is the leader
 #3 - P broadcasts this process as the leader, in its role of election organizer.
 
 from typing import MutableMapping
@@ -13,7 +13,7 @@ comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 p = comm.Get_size()
     
-electionCaller = 1
+electionCaller = 1 #Choose the Election Caller
 
 class Leader:
     id = None
